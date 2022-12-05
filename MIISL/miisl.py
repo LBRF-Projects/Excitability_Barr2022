@@ -10,6 +10,7 @@ sequenceProbability = .72  # NOTE: Doesn't actually do anything?
 numLearningBlocks = 4 # num of MI blocks
 sequenceSubBlocksPerLearningBlock = 18 # repeated elements/block in MI
 randomSubBlocksPerLearningBlock = 7 # random elements/block in MI
+sequencesPerLearningBlock = sequenceSubBlocksPerLearningBlock + randomSubBlocksPerLearningBlock
 learningWaitTime = 1.500 # time in between keys
 
 numRecallBlockResponses = 30
@@ -35,6 +36,7 @@ import sdl2.ext
 
 from _runtime.utils import Sound, DataFile, init_window
 from _runtime.sequences import create_random_sequence, create_repeating_sequence
+from _runtime.communication import get_tms_controller, get_trigger_port
 from instructions import get_instructions
 
 
@@ -53,12 +55,19 @@ fontpath = os.path.join("_Resources", "DejaVuSans.ttf")
 #       merge with feedback_resp?
 data_header = [
     'id', 'order', 'created', 'sex', 'age', 'handedness',
-    'phase', 'block', 'run', 'trial', 'run_type',
+    'phase', 'block', 'run', 'trial', 'run_type', 'tms_fire',
     'stim', 'response', 'rt', 'error', 'multi_resp', 'feedback_resp',
 ]
 recall_header = ['id', 'type', 'num', 'response', 'rt']
 sequence_header = ['id', 'num', 'seq', 'keyseq']
 
+
+# Initialize connection with Magstim & LabJack
+magstim = get_tms_controller()
+trigger = get_trigger_port()
+trigger.add_codes({
+    'fire_tms': 17, # EMG pin 1 + TMS trigger on pin 5
+})
 
 # Initialize and create the experiment window
 stimDisplay = init_window(fullscreen=True)
@@ -90,6 +99,15 @@ for stim in ['one', 'two', 'three', 'four']:
 
 # Generate the repeated sequence for the participant
 sequence = create_repeating_sequence()
+
+# Generate list for TMS stimulation
+total_sequences = numLearningBlocks * sequencesPerLearningBlock
+num_true = 50
+num_false = total_sequences - num_true
+stim_true = [True for i in range(num_true)]
+stim_false = [False for i in range(num_false)]
+stim_sequence = stim_true + stim_false
+random.shuffle(stim_sequence)
 
 
 #define a function that will kill everything safely
@@ -285,7 +303,7 @@ def runBlock(blockType, datafile, subinfo):
         randomsPerThisBlock = randomSubBlocksPerTestingBlock
     else:
         sequencesPerThisBlock = sequenceSubBlocksPerLearningBlock
-        randomsPerThisBlock = randomSubBlocksPerLearningBlock	
+        randomsPerThisBlock = randomSubBlocksPerLearningBlock
     subBlockList = []
     for i in range(sequencesPerThisBlock):
         subBlockList.append(['sequence', sequence])
@@ -294,6 +312,16 @@ def runBlock(blockType, datafile, subinfo):
     random.shuffle(subBlockList)
     subBlockNum = 0
     for subBlockType,subBlockStimuli in subBlockList:
+        # Determine whether the sequence contains a TMS pulse & prepare accordingly
+        stim = False
+        if blockType == "learning":
+            stim = stim_sequence.pop()
+        # If TMS sequence, arm magstim and choose a random trial to fire on
+        stim_trial = -1
+        if stim:
+            if not magstim.ready:
+                magstim.arm()
+            stim_trial = random.randint(2, 9)
         subBlockNum = subBlockNum + 1
         trialNum = 0
         for trialStim in subBlockStimuli:
@@ -307,6 +335,10 @@ def runBlock(blockType, datafile, subinfo):
                 responseTimeoutTime = startTime+testingWaitTime
             else:
                 responseTimeoutTime = startTime+learningWaitTime
+            # If trial is a stim trial, make sure the TMS is armed and then fire
+            if trialNum == stim_trial:
+                if magstim.ready:
+                    trigger.send('fire_tms')
             responses = waitForResponse(timeout=responseTimeoutTime,terminate=True)
             trialDoneTime = getTime()
             del sound
@@ -374,6 +406,7 @@ def runBlock(blockType, datafile, subinfo):
                 'stim': trialStim,
                 'response': response,
                 'rt': rt,
+                'tms_fire': trialNum == stim_trial,
                 'error': error,
                 'multi_resp': multiResponse,
                 'feedback_resp': feedbackResponse,
@@ -482,13 +515,13 @@ while not intro_audio.doneYet():
     events = sdl2.ext.get_events()
     check_for_quit(events)
     for event in events:
-        if event.type == sdl2.SDL_KEYDOWN:
+        if event.type == sdl2.SDL_KEYDOWN: # skips the audio
             if event.key.keysym.sym == sdl2.SDLK_DELETE:
                 intro_audio.stop()
                 break
 
 # Perform MI training phase of the task
-showMessage(instructions['mi_training'], lockWait=True)
+showMessage(instructions['mi_training'], lockWait=True) 
 for blockNum in range(numLearningBlocks):
     draw_rects(stimDisplaySurf, 100, 100)
     runBlock('learning', datafiles['rt'], subInfo)
