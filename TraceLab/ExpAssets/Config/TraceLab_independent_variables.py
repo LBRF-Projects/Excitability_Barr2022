@@ -10,3 +10,4 @@ TraceLab_ind_vars = IndependentVariableSet()
 
 TraceLab_ind_vars.add_variable("animate_time", int, [1500])
 TraceLab_ind_vars.add_variable("figure_name", str, ["random", "template_1477090164.31"])
+TraceLab_ind_vars.add_variable("stim_trial", bool, [True, False])

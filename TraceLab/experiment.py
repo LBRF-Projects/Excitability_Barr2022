@@ -373,7 +373,7 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 		self.figure = None
 
 		# Initialize TMS variables
-		self.tms_trial = True # temporary until stim shuffle logic added
+		self.tms_trial = self.stim_trial if self.response_type == "imagery" else False
 		self.tms_fired = False
 		self.tms_onset = 0
 		if self.tms_trial:
