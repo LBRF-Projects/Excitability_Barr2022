@@ -54,7 +54,7 @@ fontpath = os.path.join("_Resources", "DejaVuSans.ttf")
 # NOTE: multi_resp almost never happens (two keys pressed same frame),
 #       merge with feedback_resp?
 data_header = [
-    'id', 'order', 'created', 'sex', 'age', 'handedness',
+    'id', 'order', 'created', 'sex', 'age', 'handedness', 'rmt',
     'phase', 'block', 'run', 'trial', 'run_type', 'tms_fire',
     'stim', 'response', 'rt', 'error', 'multi_resp', 'feedback_resp',
 ]
@@ -114,6 +114,11 @@ random.shuffle(stim_sequence)
 def exitSafely():
     sdl2.ext.quit()
     sys.exit()
+
+def flush():
+    # Empties all pending events from the event queue
+	sdl2.SDL_PumpEvents() 
+	sdl2.SDL_FlushEvents(sdl2.SDL_FIRSTEVENT, sdl2.SDL_LASTEVENT)
 
 def check_for_quit(queue):
     quitting = False
@@ -457,6 +462,34 @@ def getSubInfo():
     return info
 
 
+def get_rmt_power(tms):
+    txt1 = "Is {0}% the correct RMT for the participant? (Yes / No)"
+    txt2 = (
+        "Please set the TMS power level to the participant's RMT,\n"
+        "then press any key to continue."
+    )
+    rmt = tms.get_power()
+    rmt_confirmed = False
+    flush()
+    while not rmt_confirmed:
+        # Draw RMT prompt to the screen
+        clearScreen(black)
+        drawText(txt1.format(rmt), font, 'grey')
+        stimDisplay.refresh()
+        # Check for a response
+        resp = waitForResponse(terminate=True)[0][0]
+        if resp == 'y':
+            rmt_confirmed = True
+        elif resp == 'n':
+            clearScreen(black)
+            drawText(txt2, font, 'grey')
+            stimDisplay.refresh()
+            waitForResponse(terminate=True)
+            rmt = tms.get_power()
+
+    return rmt
+
+
 def init_data(pid):
     # Create the data folder for the participant
     filebase = pid
@@ -495,6 +528,12 @@ handedness = subInfo['handedness']
 instructions = get_instructions(order)
 responseKeys = responseKeySet[handedness]
 keySequence = [responseKeys[stim] for stim in sequence]
+
+# Get the RMT for the participant & set TMS power to 120%
+rmt = get_rmt_power(magstim)
+stim_power = int(round(rmt * 1.2))
+subInfo['rmt'] = rmt
+magstim.set_power(stim_power)
 
 # Create data folder/files for the participant and write repeated sequence
 datafiles = init_data(pid)
@@ -556,4 +595,5 @@ stop_sound.play()
 
 # Show completed message and exit the task
 showMessage(instructions['done'], lockWait=True)
+magstim.set_power(rmt) # reset TMS power level to RMT
 exitSafely()
