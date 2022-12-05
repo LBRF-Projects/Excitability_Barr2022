@@ -5,7 +5,7 @@ import os
 import io
 import time
 
-from random import choice
+from random import choice, uniform
 from sdl2 import SDL_MOUSEBUTTONDOWN, SDL_KEYDOWN
 
 import klibs
@@ -372,6 +372,14 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 		self.control_response = -1
 		self.figure = None
 
+		# Initialize TMS variables
+		self.tms_trial = True # temporary until stim shuffle logic added
+		self.tms_fired = False
+		self.tms_onset = 0
+		if self.tms_trial:
+			tms_min, tms_max = P.tms_stim_range
+			self.tms_onset = int(self.animate_time * uniform(tms_min, tms_max))
+
 		# Either load a pre-generated figure or generate a new one, depending on trial
 		if self.figure_name == "random":
 			self.figure = self._generate_figure(duration=self.animate_time)
@@ -460,7 +468,10 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 			"it": self.it,
 			"control_question": self.control_question if self.response_type == CTRL else 'NA',
 			"control_response": self.control_response,
-			"mt": self.mt
+			"mt": self.mt,
+			"stim_trial": self.tms_trial,
+			"tms_onset": self.tms_onset,
+			"tms_fired": self.tms_fired,
 		}
 
 
@@ -580,18 +591,30 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 			left_button_down = button == 1
 			if self.within_boundary('origin', (x, y)) and left_button_down:
 				at_origin = True
-				self.rt = self.evm.trial_time - start
+				resp_start = self.evm.trial_time
+				self.rt = resp_start - start
 				self.trigger.send('imagery_start')
 			ui_request()
 		fill()
 		blit(self.origin_active, 5, self.origin_pos, flip_x=P.flip_x)
 		flip()
 
+		tms_fire_onset = (resp_start * 1000) + self.tms_onset
+		allow_fire = self.tms_trial and not self.__practicing__
 		while at_origin:
 			x, y, button = mouse_pos(return_button_state=True)
 			left_button_down = button == 1
+			if allow_fire and self.evm.trial_time_ms > tms_fire_onset:
+				if self.magstim.ready:
+					# Update onset with actual fire time and send trigger to fire
+					self.tms_onset = (self.evm.trial_time - resp_start) * 1000
+					self.trigger.send('tms_fire')
+					self.tms_fired = True
+				allow_fire = False
+			# If finger lifted from circle, end response
 			if not (self.within_boundary('origin', (x, y)) and left_button_down):
 				at_origin = False
+
 		self.mt = self.evm.trial_time - (self.rt + start)
 		if P.demo_mode:
 			hide_mouse_cursor()

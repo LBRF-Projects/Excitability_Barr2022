@@ -75,7 +75,10 @@ CREATE TABLE trials (
 	it               FLOAT                             NOT NULL,
 	control_question TEXT                              NOT NULL,
 	control_response INTEGER                           NOT NULL,
-	mt               FLOAT                             NOT NULL
+	mt               FLOAT                             NOT NULL,
+	stim_trial       BOOLEAN                           NOT NULL,
+	tms_onset        FLOAT                             NOT NULL,
+	tms_fired        BOOLEAN                           NOT NULL
 );
 
 CREATE TABLE sessions (

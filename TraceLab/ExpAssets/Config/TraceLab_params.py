@@ -37,6 +37,7 @@ trigger_codes = {
 #########################################
 requires_tms = True
 tms_serial_port = '/dev/ttyUSB0'
+tms_stim_range = (0.25, 0.75) # min/max proportion of animation time
 
 #########################################
 # Environment Aesthetic Defaults
