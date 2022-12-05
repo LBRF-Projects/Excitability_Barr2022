@@ -58,6 +58,7 @@ CREATE TABLE participants (
 CREATE TABLE trials (
 	id               INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 	participant_id   INTEGER                           NOT NULL,
+	rmt              INTEGER                           NOT NULL,
 	session_num      INTEGER                           NOT NULL,
 	block_num        INTEGER                           NOT NULL,
 	trial_num        INTEGER                           NOT NULL,

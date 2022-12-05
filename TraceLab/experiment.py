@@ -13,7 +13,7 @@ from klibs import P
 from klibs.KLConstants import RECT_BOUNDARY, CIRCLE_BOUNDARY, STROKE_OUTER, QUERY_UPD
 from klibs.KLBoundary import BoundaryInspector
 from klibs.KLTime import CountDown
-from klibs.KLUserInterface import any_key, ui_request
+from klibs.KLUserInterface import any_key, ui_request, key_pressed
 from klibs.KLUtilities import (pump, flush, scale, now, mouse_pos,
 	show_mouse_cursor, hide_mouse_cursor, utf8)
 from klibs.KLUtilities import colored_stdout as cso
@@ -246,6 +246,46 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 			from communication import get_tms_controller
 			self.magstim = get_tms_controller()
 
+		# Set power level to 120% of the participant's RMT
+		self.rmt = self.get_rmt_power()
+		self.stim_power = int(round(self.rmt * 1.2))
+		self.magstim.set_power(self.stim_power)
+
+
+	def get_rmt_power(self):
+		txt = "Is {0}% the correct RMT for the participant? (Yes / No)"
+		msg1 = None
+		msg2 = message(
+			"Please set the TMS power level to the participant's RMT, "
+			"then press any key to continue.",
+			blit_txt = False, align = 'center'
+		)
+
+		rmt = self.magstim.get_power()
+		rmt_confirmed = False
+		flush()
+		while not rmt_confirmed:
+			# If RMT message has changed, re-render it
+			if not msg1:
+				msg1 = message(txt.format(rmt), blit_txt = False)
+			# Draw RMT prompt to the screen
+			fill()
+			blit(msg1, 5, P.screen_c)
+			flip()
+			# Check for responses in input queue
+			q = pump(True)
+			if key_pressed('y', queue=q):
+				rmt_confirmed = True
+			elif key_pressed('n', queue=q):
+				fill()
+				blit(msg2, 5, P.screen_c)
+				flip()
+				any_key()
+				rmt = self.magstim.get_power()
+				msg1 = None  # Makes msg1 re-render with new RMT
+
+		return rmt
+
 
 	def block(self):
 
@@ -395,6 +435,7 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 			return
 
 		return {
+			"rmt": self.rmt,
 			"session_num": self.session_number,
 			"block_num": P.block_number,
 			"trial_num": P.trial_number,
@@ -460,6 +501,9 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 			'completed': now(True)
 		}
 		self.db.insert(session_data, "sessions")
+
+		# Reset TMS power to resting motor threshold
+		self.magstim.set_power(self.rmt)
 
 		# show 'experiment complete' message before exiting experiment
 		msg = message(P.experiment_complete_message, "instructions", blit_txt=False)
