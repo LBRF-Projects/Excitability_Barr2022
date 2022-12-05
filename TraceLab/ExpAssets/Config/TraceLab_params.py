@@ -186,9 +186,9 @@ exclude_data_cols = [
 # it will automatically be used for each participant without prompting.
 session_structures = {
     'first': [
-        ['MI-XX', 'MI-XX', 'MI-XX', 'MI-XX', 'PP-XX'] # session 1
+        ['MI-XX', 'MI-XX', 'MI-XX', 'MI-XX', 'MI-XX', 'PP-XX'] # session 1
     ],
     'second': [
-        ['MI-XX', 'MI-XX', 'MI-XX', 'MI-XX', 'PP-XX'] # session 1
+        ['MI-XX', 'MI-XX', 'MI-XX', 'MI-XX', 'MI-XX', 'PP-XX'] # session 1
     ],
 }
