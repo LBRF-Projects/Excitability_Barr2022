@@ -1,0 +1,10 @@
+# Ignore all invisible files except those explictly whitelisted
+**/.*
+!.gitignore
+
+# Ignore data files
+_Data/*
+
+# Ignore useless compiled Python files
+__pycache__
+**/*.pyc
