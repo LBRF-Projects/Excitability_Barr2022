@@ -18,7 +18,7 @@ capture_figures_mode = False
 auto_generate = False  # whether to generate figures without prompting in capture mode
 auto_generate_count = 10  # number of figures to generate in auto-generate/capture mode
 
-#########################################
+######################################### 
 # Digital Trigger Configuration
 #########################################
 requires_triggers = True
@@ -28,6 +28,7 @@ trigger_codes = {
     'animation_start': 4,
     'circle_on': 6,
     'imagery_start': 8,
+    'tms_fire': 17, # EMG pin 1 + TMS trigger on pin 5
     'trial_end': 10,
 }
 
