@@ -66,7 +66,9 @@ sequence_header = ['id', 'num', 'seq', 'keyseq']
 magstim = get_tms_controller()
 trigger = get_trigger_port()
 trigger.add_codes({
+    'trial_start': 2,
     'fire_tms': 17, # EMG pin 1 + TMS trigger on pin 5
+    'feedback_on': 4,
 })
 
 # Initialize and create the experiment window
@@ -332,6 +334,7 @@ def runBlock(blockType, datafile, subinfo):
         for trialStim in subBlockStimuli:
             clearScreen(black)
             stimDisplay.refresh()
+            trigger.send('trial_start')
             trialNum = trialNum + 1
             sound = stim_sounds[trialStim]
             sound.play()
@@ -386,6 +389,7 @@ def runBlock(blockType, datafile, subinfo):
             clearScreen(black)
             drawText(feedbackText, font)
             stimDisplay.refresh()
+            trigger.send('feedback_on')
             responses = waitForResponse(timeout=feedbackDoneTime,terminate=True)
             if len(responses)>0:
                 stop_sound.play()
