@@ -66,9 +66,10 @@ sequence_header = ['id', 'num', 'seq', 'keyseq']
 magstim = get_tms_controller()
 trigger = get_trigger_port()
 trigger.add_codes({
-    'trial_start': 2,
+    'stim_on': 2,
+    'stim_on_test': 6,
     'fire_tms': 17, # EMG pin 1 + TMS trigger on pin 5
-    'feedback_on': 4,
+    'feedback_on': 8,
 })
 
 # Initialize and create the experiment window
@@ -114,6 +115,7 @@ random.shuffle(stim_sequence)
 
 #define a function that will kill everything safely
 def exitSafely():
+    trigger.close() # Close LabJack properly
     sdl2.ext.quit()
     sys.exit()
 
@@ -358,9 +360,10 @@ def runBlock(blockType, datafile, subinfo):
     random.shuffle(subBlockList)
     subBlockNum = 0
     for subBlockType,subBlockStimuli in subBlockList:
+        test_block = blockType == 'testing'
         # Determine whether the sequence contains a TMS pulse & prepare accordingly
         stim = False
-        if blockType == "learning":
+        if not test_block:
             stim = stim_sequence.pop()
         # If TMS sequence, arm magstim and choose a random trial to fire on
         stim_trial = -1
@@ -371,24 +374,39 @@ def runBlock(blockType, datafile, subinfo):
         subBlockNum = subBlockNum + 1
         trialNum = 0
         for trialStim in subBlockStimuli:
+            # Clear screen and play audio clip (number) for trial
             clearScreen(black)
             stimDisplay.refresh()
-            trigger.send('trial_start')
+            trigger.send('stim_on_test' if test_block else 'stim_on')
             trialNum = trialNum + 1
             sound = stim_sounds[trialStim]
             sound.play()
+            # Determine response timeout and TMS onset for trial
             startTime = getTime()
-            if blockType=='testing':
+            tms_fire_onset = startTime + 0.5
+            if test_block:
                 responseTimeoutTime = startTime+testingWaitTime
             else:
                 responseTimeoutTime = startTime+learningWaitTime
-            # If trial is a stim trial, make sure the TMS is armed and then fire
-            if trialNum == stim_trial:
-                if magstim.ready:
-                    trigger.send('fire_tms')
-            responses = waitForResponse(timeout=responseTimeoutTime,terminate=True)
+            # Enter wait loop w/ timeout for response
+            responses = []
+            allow_fire = trialNum == stim_trial
+            while getTime() < responseTimeoutTime:
+                # Check for keypresses during response period
+                sdl2.SDL_PumpEvents()
+                events = sdl2.ext.get_events()
+                check_for_quit(events)
+                resp = get_keypress(events)
+                if resp:
+                    responses.append(resp)
+                    break
+                # If TMS trial and time to fire, trigger the magstim + EMG
+                if allow_fire and getTime() > tms_fire_onset:
+                    if magstim.ready:
+                        trigger.send('fire_tms')
+                    allow_fire = False
             trialDoneTime = getTime()
-            del sound
+            # Parse trial responses and prepare feedback
             response = 'NA'
             rt = 'NA'
             error = 'NA'
@@ -396,7 +414,7 @@ def runBlock(blockType, datafile, subinfo):
             feedbackResponse = 'FALSE'
             multiResponse = 'FALSE'
             err_sound = False
-            if blockType == 'testing':
+            if test_block:
                 if len(responses) == 0:
                     feedbackText = 'Miss!'
                     err_sound = True
@@ -578,7 +596,6 @@ for i in range(len(sequence)):
 
 # Show intro message and play tutorial audio
 showMessage(instructions['intro'], lockWait=True)
-draw_rects(stimDisplaySurf, 100, 100)
 intro_audio.play()
 while not intro_audio.doneYet():
     sdl2.SDL_PumpEvents() 
