@@ -140,6 +140,7 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 
 		self.figure_name = P.practice_figure
 		self.animate_time = P.practice_animation_time
+		self.stim_trial = False
 		self.setup_response_collector()
 		self.trial_prep()
 		self.evm.start_clock()
