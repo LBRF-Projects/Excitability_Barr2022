@@ -374,11 +374,12 @@ def runBlock(blockType, datafile, subinfo):
         stim = False
         if not test_block:
             stim = stim_sequence.pop()
-        # If TMS sequence, arm magstim and choose a random trial to fire on
+        # If learning block, arm magstim and keep it armed
+        if test_block == False and not magstim.ready:
+            magstim.arm()
+        # If TMS sequence, choose a random trial to fire on
         stim_trial = -1
         if stim:
-            if not magstim.ready:
-                magstim.arm()
             stim_trial = random.randint(2, 9)
         subBlockNum = subBlockNum + 1
         trialNum = 0
