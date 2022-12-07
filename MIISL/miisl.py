@@ -23,6 +23,9 @@ randomSubBlocksPerTestingBlock = 10 # random elements/block in pp
 testingWaitTime = 2.000 # why different than learningWaitTime ?
 feedbackDuration = 1.000
 
+tms_pulses_per_block = 13 # 13 pulses x 4 blocks = 52 total pulses
+tms_fire_delay = 0.5 # delay between audio start and TMS fire (in seconds)
+
 
 ### Import required libraries ###
 
@@ -106,11 +109,10 @@ for stim in ['one', 'two', 'three', 'four']:
 sequence = create_repeating_sequence()
 
 # Generate list for TMS stimulation
-pulses_per_block = 13 # 13 pulses x 4 blocks = 52 total pulses
 stim_sequence = []
 for i in range(numLearningBlocks):
-    no_pulse = sequencesPerLearningBlock - pulses_per_block
-    stim_true = [True for i in range(pulses_per_block)]
+    no_pulse = sequencesPerLearningBlock - tms_pulses_per_block
+    stim_true = [True for i in range(tms_pulses_per_block)]
     stim_false = [False for i in range(no_pulse)]
     block_seq = stim_true + stim_false
     random.shuffle(block_seq) # Randomize each block's pulses separately
@@ -390,7 +392,7 @@ def runBlock(blockType, datafile, subinfo):
             sound.play()
             # Determine response timeout and TMS onset for trial
             startTime = getTime()
-            tms_fire_onset = startTime + 0.5
+            tms_fire_onset = startTime + tms_fire_delay
             if test_block:
                 responseTimeoutTime = startTime+testingWaitTime
             else:
