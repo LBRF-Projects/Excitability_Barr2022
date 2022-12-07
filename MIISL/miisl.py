@@ -152,6 +152,16 @@ def simpleWait(duration):
         sdl2.SDL_PumpEvents()
 
 
+def get_keypress(queue):
+    resp = None
+    for e in queue:
+        if e.type == sdl2.SDL_KEYDOWN:
+            keyname = sdl2.SDL_GetKeyName(e.key.keysym.sym)
+            key = sdl2.ext.compat.stringify(keyname).lower()
+            resp = (key, e.key.timestamp / 1000.0)
+    return resp
+
+
 #define a function that waits for a response
 def waitForResponse(timeout=None,terminate=False):
     responses = []
@@ -302,6 +312,35 @@ def draw_rects(surface, width, height):
     #	simpleWait(0.100)
 
 
+def show_feedback(text, duration=1.0):
+    # Display feedback message
+    clearScreen(black)
+    drawText(text, font)
+    stimDisplay.refresh()
+    trigger.send('feedback_on')
+    # Start feedback wait loop
+    feedback_resp = None
+    feedback_start = getTime()
+    while (feedback_start + duration) > getTime():
+        sdl2.SDL_PumpEvents()
+        events = sdl2.ext.get_events()
+        check_for_quit(events)
+        resp = get_keypress(events)
+        # If participant responds during feedback, update error
+        if resp and not feedback_resp:
+            stop_sound.play()
+            feedback_resp = resp
+            if text == 'Miss!':
+                text = 'Too slow!'
+            else:
+                text = 'Respond only once!'
+            clearScreen(black)
+            drawText(text, font)
+            stimDisplay.refresh()
+            feedback_start = getTime()
+    return (text, feedback_resp)
+
+
 #define a function to run a testing block
 def runBlock(blockType, datafile, subinfo):
     clearScreen(black)
@@ -356,12 +395,15 @@ def runBlock(blockType, datafile, subinfo):
             feedbackText = ''
             feedbackResponse = 'FALSE'
             multiResponse = 'FALSE'
-            if blockType=='testing':
-                if len(responses)==0:
+            err_sound = False
+            if blockType == 'testing':
+                if len(responses) == 0:
                     feedbackText = 'Miss!'
-                elif len(responses)>1:
+                    err_sound = True
+                elif len(responses) > 1:
                     feedbackText = 'Respond only once!'
                     multiResponse = 'TRUE'
+                    err_sound = True
                 else:
                     response = responses[0][0]
                     rt = responses[0][1]-startTime
@@ -371,39 +413,24 @@ def runBlock(blockType, datafile, subinfo):
                     else:
                         feedbackText = 'XXX'
                         error = 'TRUE'
+                        err_sound = True
                     if response in responseKeys.values():
                         response = [key for key,value in responseKeys.items() if value==response][0]
-                if (error=='TRUE') or (feedbackText=='Respond only once!') or (feedbackText=='Miss!'):
-                    stop_sound.play()
-                feedbackDoneTime = trialDoneTime+feedbackDuration
             else:
-                if len(responses)>0:
-                    stop_sound.play()
-                    feedbackDoneTime = trialDoneTime+feedbackDuration
+                if len(responses) > 0:
                     response = responses[0][0]
                     rt = responses[0][1]-startTime
                     feedbackText = "Don't respond!"
-                else:
-                    feedbackDoneTime = trialDoneTime
-            #show feedback
-            clearScreen(black)
-            drawText(feedbackText, font)
-            stimDisplay.refresh()
-            trigger.send('feedback_on')
-            responses = waitForResponse(timeout=feedbackDoneTime,terminate=True)
-            if len(responses)>0:
+                    err_sound = True
+            # Give visual/auditory feedback on response
+            if err_sound:
                 stop_sound.play()
-                if feedbackText=='Miss!':
-                    feedbackText = 'Too slow!'
-                    response = responses[0][0]
-                    rt = responses[0][1]-startTime
-                else:
-                    feedbackText = 'Respond only once!'
+            if len(feedbackText):
+                msg, resp = show_feedback(feedbackText, feedbackDuration)
+                if msg == 'Too slow!':
+                    response, rt = resp
+                elif resp:
                     feedbackResponse = 'TRUE'
-                clearScreen(black)
-                drawText(feedbackText, font)
-                stimDisplay.refresh()
-                responses = waitForResponse(timeout=responses[0][1]+feedbackDuration,terminate=True)
             # Gather and write out data
             dat = subinfo.copy()
             dat.update({
