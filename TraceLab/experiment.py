@@ -253,21 +253,18 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 
 
 	def get_rmt_power(self):
+		rmt = self.magstim.get_power()
 		txt = "Is {0}% the correct RMT for the participant? (Yes / No)"
-		msg1 = None
+		msg1 = message(txt.format(rmt), blit_txt = False)
 		msg2 = message(
-			"Please set the TMS power level to the participant's RMT, "
-			"then press any key to continue.",
+			"Please set the TMS power level to the correct RMT using the arrow keys,\n"
+			"then press the [return] key to continue.",
 			blit_txt = False, align = 'center'
 		)
 
-		rmt = self.magstim.get_power()
 		rmt_confirmed = False
 		flush()
 		while not rmt_confirmed:
-			# If RMT message has changed, re-render it
-			if not msg1:
-				msg1 = message(txt.format(rmt), blit_txt = False)
 			# Draw RMT prompt to the screen
 			fill()
 			blit(msg1, 5, P.screen_c)
@@ -277,12 +274,25 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 			if key_pressed('y', queue=q):
 				rmt_confirmed = True
 			elif key_pressed('n', queue=q):
-				fill()
-				blit(msg2, 5, P.screen_c)
-				flip()
-				any_key()
+				break
+
+		# If TMS power level is incorrect, give chance to adjust w/ arrow keys
+		rmt_temp = rmt
+		while not rmt_confirmed:
+			pwr_msg = message("Power level: {0}%".format(rmt_temp), blit_txt=False)
+			fill()
+			blit(msg2, 2, P.screen_c)
+			blit(pwr_msg, 5, (P.screen_c[0], int(P.screen_y * 0.55)))
+			flip()
+			q = pump(True)
+			if key_pressed('up', queue=q) and rmt_temp <= 100:
+				rmt_temp += 1
+			elif key_pressed('down', queue=q) and rmt_temp >= 0:
+				rmt_temp -= 1
+			elif key_pressed('return', queue=q):
+				self.magstim.set_power(rmt_temp)
 				rmt = self.magstim.get_power()
-				msg1 = None  # Makes msg1 re-render with new RMT
+				rmt_confirmed = True
 
 		return rmt
 

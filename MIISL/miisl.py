@@ -589,27 +589,48 @@ def getSubInfo():
 def get_rmt_power(tms):
     txt1 = "Is {0}% the correct RMT for the participant? (Yes / No)"
     txt2 = (
-        "Please set the TMS power level to the participant's RMT,\n"
-        "then press any key to continue."
+        "Please set the TMS power level to the correct RMT using the arrow keys,\n"
+        "then press the [return] key to continue.\n\n"
+        "Power level: {0}%"
     )
     rmt = tms.get_power()
-    rmt_confirmed = False
+    resp = None
     flush()
-    while not rmt_confirmed:
-        # Draw RMT prompt to the screen
+    # Draw initial RMT prompt to the screen & wait for a valid response
+    while not resp:
         clearScreen(black)
         drawText(txt1.format(rmt), font, 'grey')
         stimDisplay.refresh()
         # Check for a response
-        resp = waitForResponse(terminate=True)[0][0]
-        if resp == 'y':
-            rmt_confirmed = True
-        elif resp == 'n':
-            clearScreen(black)
-            drawText(txt2, font, 'grey')
-            stimDisplay.refresh()
-            waitForResponse(terminate=True)
-            rmt = tms.get_power()
+        key = waitForResponse(terminate=True)[0][0]
+        if key in ['y', 'n']:
+            resp = key
+
+    # If RMT is correct, return immediately
+    if resp == 'y':
+        return rmt
+
+    # Otherwise, give chance to adjust RMT using arrow keys
+    rmt_temp = rmt
+    done = False
+    while not done:
+        clearScreen(black)
+        drawText(txt2.format(rmt_temp), font, 'grey')
+        stimDisplay.refresh()
+        events = pump()
+        check_for_quit(events)
+        for e in events:
+            if e.type == sdl2.SDL_KEYDOWN:
+                k = e.key.keysym
+                if k.sym == sdl2.SDLK_UP and rmt_temp <= 100:
+                    rmt_temp += 1
+                elif k.sym == sdl2.SDLK_DOWN and rmt_temp >= 0:
+                    rmt_temp -= 1
+                elif k.sym == sdl2.SDLK_RETURN:
+                    tms.set_power(rmt_temp)
+                    rmt = tms.get_power()
+                    done = True
+                    break
 
     return rmt
 
