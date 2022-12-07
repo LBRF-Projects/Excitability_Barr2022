@@ -5,6 +5,8 @@ responseKeySet = {
     'r': {'one': 'v', 'two': 'c', 'three': 'x', 'four': 'z'},
     'l': {'one': 'm', 'two': ',', 'three': '.', 'four': '/'},
 }
+digitMap = {'one': '1', 'two': '2', 'three': '3', 'four': '4'}
+digitMapReverse = {'1': 'one', '2': 'two', '3': 'three', '4': 'four'}
 sequenceProbability = .72  # NOTE: Doesn't actually do anything?
 
 numLearningBlocks = 4 # num of MI blocks
@@ -54,12 +56,12 @@ fontpath = os.path.join("_Resources", "DejaVuSans.ttf")
 # NOTE: multi_resp almost never happens (two keys pressed same frame),
 #       merge with feedback_resp?
 data_header = [
-    'id', 'order', 'created', 'sex', 'age', 'handedness', 'rmt',
+    'id', 'created', 'sex', 'age', 'handedness', 'rmt',
     'phase', 'block', 'run', 'trial', 'run_type', 'tms_fire',
     'stim', 'response', 'rt', 'error', 'multi_resp', 'feedback_resp',
 ]
-recall_header = ['id', 'type', 'num', 'response', 'rt']
 sequence_header = ['id', 'num', 'seq', 'keyseq']
+recall_header = ['id', 'explicit', 'num', 'actual', 'response']
 
 
 # Initialize connection with Magstim & LabJack
@@ -119,6 +121,12 @@ def exitSafely():
     sdl2.ext.quit()
     sys.exit()
 
+
+def pump():
+    sdl2.SDL_PumpEvents()
+    return sdl2.ext.get_events()
+
+
 def flush():
     # Empties all pending events from the event queue
 	sdl2.SDL_PumpEvents() 
@@ -172,8 +180,7 @@ def waitForResponse(timeout=None,terminate=False):
         if timeout!=None:
             if getTime()>timeout:
                 done = True
-        sdl2.SDL_PumpEvents()
-        events = sdl2.ext.get_events()
+        events = pump()
         check_for_quit(events)
         for event in events:
             if event.type == sdl2.SDL_KEYDOWN:
@@ -259,8 +266,7 @@ def getInput(getWhat):
     sdl2.SDL_StartTextInput()
     done = False
     while not done:
-        sdl2.SDL_PumpEvents()
-        events = sdl2.ext.get_events()
+        events = pump()
         check_for_quit(events)
         refresh = False
         for event in events:
@@ -324,8 +330,7 @@ def show_feedback(text, duration=1.0):
     feedback_resp = None
     feedback_start = getTime()
     while (feedback_start + duration) > getTime():
-        sdl2.SDL_PumpEvents()
-        events = sdl2.ext.get_events()
+        events = pump()
         check_for_quit(events)
         resp = get_keypress(events)
         # If participant responds during feedback, update error
@@ -393,8 +398,7 @@ def runBlock(blockType, datafile, subinfo):
             allow_fire = trialNum == stim_trial
             while getTime() < responseTimeoutTime:
                 # Check for keypresses during response period
-                sdl2.SDL_PumpEvents()
-                events = sdl2.ext.get_events()
+                events = pump()
                 check_for_quit(events)
                 resp = get_keypress(events)
                 if resp:
@@ -490,15 +494,82 @@ def doRecall(datafile, subinfo):
         dat['rt'] = rt
         datafile.write_row(dat)
 
+
+def explicit_recall(datafile, subinfo):
+    # Display explicit recall prompt
+    txt1 = "The purpose of this task was to teach you a 10-digit sequence."
+    txt2 = "Do you feel that you learned a sequence during the task? (Yes / No)"
+    clearScreen(black)
+    drawText(txt1 + "\n" + txt2, font, 'grey')
+    stimDisplay.refresh()
+
+    # Wait for initial recall response
+    explicit = False
+    resp = waitForResponse(terminate=True)[0][0]
+    if resp == 'y':
+        explicit = True
+
+    # Display follow-up recall prompt
+    txt3 = "Please enter the 10-digit sequence to the best of your ability."
+    txt4 = "It is okay if you do not remember every number, just do your best:"
+    seq = ""
+    update_text = True
+    done = False
+    flush()
+    while not done:
+        if update_text:
+            clearScreen(black)
+            drawText(txt3 + "\n" + txt4 + "\n" + seq, font, 'grey')
+            stimDisplay.refresh()
+            update_text = False
+
+        events = pump()
+        check_for_quit(events)
+        for e in events:
+            if e.type == sdl2.SDL_KEYDOWN:
+                k = e.key.keysym
+
+                if k.sym == sdl2.SDLK_BACKSPACE:
+                    seq = seq[:-1]
+                    update_text = True
+
+                elif k.sym == sdl2.SDLK_RETURN:
+                    if len(seq) != 10:
+                        err = "Sequence must be 10 digits long (only {0} given)"
+                        clearScreen(black)
+                        drawText(err.format(len(seq)), font, 'grey')
+                        stimDisplay.refresh()
+                        waitForResponse(terminate=True)
+                        update_text = True
+                    else:
+                        done = True
+                        break
+                
+                else:
+                    keyname = sdl2.SDL_GetKeyName(k.sym)
+                    resp = sdl2.ext.compat.stringify(keyname).lower()
+                    for digit, key in responseKeys.items():
+                        if resp == key and len(seq) < 10:
+                            seq += digitMap[digit]
+                            update_text = True
+
+    # Log sequence to data file
+    for i in range(len(sequence)):
+        dat = subinfo.copy()
+        dat['explicit'] = 'TRUE' if explicit else 'FALSE'
+        dat['num'] = i + 1
+        dat['actual'] = sequence[i]
+        dat['response'] = digitMapReverse[seq[i]]
+        datafile.write_row(dat)
+
         
 def getSubInfo():
     """Collect demographics info from the participant.
     """
     created = time.strftime("%Y-%m-%d %H:%M:%S") # Default R format (as.POSIXct)
     sid = getInput('ID (\'test\' to demo): ')
-    order = getInput('Order (1 or 2): ')
 
-    info = {'id': sid, 'order': order, 'created': created}
+    info = {'id': sid, 'created': created}
     if sid != 'test':
         info['sex'] = getInput('Sex (m or f): ')
         info['age'] = getInput('Age (2-digit number): ')
@@ -553,14 +624,12 @@ def init_data(pid):
     # Get the data output paths for the participant
     sequence_path = os.path.join(participant_dir, filebase + "_sequence.txt")
     rt_data_path = os.path.join(participant_dir, filebase + "_rt.txt")
-    recall1_data_path = os.path.join(participant_dir, filebase + "_recall.txt")
-    recall2_data_path = os.path.join(participant_dir, filebase + "_recall2.txt")
+    recall_data_path = os.path.join(participant_dir, filebase + "_recall.txt")
 
     # Create data output files for the participant
     datafiles = {
         'rt': DataFile(rt_data_path, data_header),
-        'recall1': DataFile(recall1_data_path, recall_header),
-        'recall2': DataFile(recall2_data_path, recall_header),
+        'recall': DataFile(recall_data_path, recall_header),
         'sequence': DataFile(sequence_path, sequence_header),
     }
     return datafiles
@@ -572,9 +641,8 @@ def init_data(pid):
 # Collect demographic/runtime info
 subInfo = getSubInfo()
 pid = subInfo['id']
-order = int(subInfo['order'])
 handedness = subInfo['handedness']
-instructions = get_instructions(order)
+instructions = get_instructions()
 responseKeys = responseKeySet[handedness]
 keySequence = [responseKeys[stim] for stim in sequence]
 
@@ -598,8 +666,7 @@ for i in range(len(sequence)):
 showMessage(instructions['intro'], lockWait=True)
 intro_audio.play()
 while not intro_audio.doneYet():
-    sdl2.SDL_PumpEvents() 
-    events = sdl2.ext.get_events()
+    events = pump()
     check_for_quit(events)
     for event in events:
         if event.type == sdl2.SDL_KEYDOWN: # skips the audio
@@ -627,19 +694,8 @@ for blockNum in range(numTestingBlocks):
         draw_rects(stimDisplaySurf, 100, 100)
         showMessage('Take a break!\nTo resume, press any key.')
 
-# Perform first recall block
-showMessage(instructions['recall1'], lockWait=True)
-recall_type = "avoid" if order == 2 else "replicate"
-doRecall(datafiles['recall1'], {'id': pid, 'type': recall_type})
-draw_rects(stimDisplaySurf, 100, 100)
-stop_sound.play()
-
-# Perform second recall block
-showMessage(instructions['recall2'], lockWait=True)
-recall_type = "replicate" if order == 2 else "avoid"
-doRecall(datafiles['recall2'], {'id': pid, 'type': recall_type})
-draw_rects(stimDisplaySurf, 100, 100)
-stop_sound.play()
+# Perform explicit sequence recall
+explicit_recall(datafiles['recall'], {'id': pid})
 
 # Show completed message and exit the task
 showMessage(instructions['done'], lockWait=True)
