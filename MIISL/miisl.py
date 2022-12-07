@@ -106,13 +106,15 @@ for stim in ['one', 'two', 'three', 'four']:
 sequence = create_repeating_sequence()
 
 # Generate list for TMS stimulation
-total_sequences = numLearningBlocks * sequencesPerLearningBlock
-num_true = 50
-num_false = total_sequences - num_true
-stim_true = [True for i in range(num_true)]
-stim_false = [False for i in range(num_false)]
-stim_sequence = stim_true + stim_false
-random.shuffle(stim_sequence)
+pulses_per_block = 13 # 13 pulses x 4 blocks = 52 total pulses
+stim_sequence = []
+for i in range(numLearningBlocks):
+    no_pulse = sequencesPerLearningBlock - pulses_per_block
+    stim_true = [True for i in range(pulses_per_block)]
+    stim_false = [False for i in range(no_pulse)]
+    block_seq = stim_true + stim_false
+    random.shuffle(block_seq) # Randomize each block's pulses separately
+    stim_sequence += block_seq
 
 
 #define a function that will kill everything safely
