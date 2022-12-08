@@ -108,14 +108,38 @@ for stim in ['one', 'two', 'three', 'four']:
 # Generate the repeated sequence for the participant
 sequence = create_repeating_sequence()
 
+# Define custom function for randomizing TMS pulses during each block
+def randomize_pulses(num_sequences, num_pulses):
+    no_pulse = num_sequences - num_pulses
+    stim_true = [True for i in range(num_pulses)]
+    stim_false = [False for i in range(no_pulse)]
+    block_seq = stim_true + stim_false
+    # If possible, ensure a max of 2 non-stim sequences in a row to prevent
+    # TMS from disarming automatically due to inactivity
+    valid = False
+    while not valid:
+        random.shuffle(block_seq)
+        # Ensure the pulse/sequence ratio allows the requested spacing
+        if int(num_sequences / 3) >= num_pulses:
+            break
+        # Ensure shuffled sequence doesn't have more than 2 non-stim sequences
+        # in a row (ignoring first/last sequences)
+        valid = True
+        consecutive_non_pulse = 0
+        for stim_seq in block_seq[1:-1]:
+            if stim_seq:
+                consecutive_non_pulse = 0
+            else:
+                consecutive_non_pulse += 1
+            if consecutive_non_pulse > 2:
+                valid = False
+                break
+    return block_seq
+
 # Generate list for TMS stimulation
 stim_sequence = []
 for i in range(numLearningBlocks):
-    no_pulse = sequencesPerLearningBlock - tms_pulses_per_block
-    stim_true = [True for i in range(tms_pulses_per_block)]
-    stim_false = [False for i in range(no_pulse)]
-    block_seq = stim_true + stim_false
-    random.shuffle(block_seq) # Randomize each block's pulses separately
+    block_seq = randomize_pulses(sequencesPerLearningBlock, tms_pulses_per_block)
     stim_sequence += block_seq
 
 
@@ -720,6 +744,7 @@ showMessage(instructions['mi_training'], lockWait=True)
 for blockNum in range(numLearningBlocks):
     draw_rects(stimDisplaySurf, 100, 100)
     runBlock('learning', datafiles['rt'], subInfo)
+    magstim.disarm() # Disarm after each block
     stop_sound.play()
     if blockNum < (numLearningBlocks - 1):
         draw_rects(stimDisplaySurf, 100, 100)
