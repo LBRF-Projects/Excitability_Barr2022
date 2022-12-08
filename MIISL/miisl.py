@@ -60,7 +60,7 @@ fontpath = os.path.join("_Resources", "DejaVuSans.ttf")
 #       merge with feedback_resp?
 data_header = [
     'id', 'created', 'sex', 'age', 'handedness', 'rmt',
-    'phase', 'block', 'run', 'trial', 'run_type', 'tms_fire',
+    'phase', 'block', 'run', 'trial', 'run_type', 'tms_trial', 'tms_fired',
     'stim', 'response', 'rt', 'error', 'multi_resp', 'feedback_resp',
 ]
 sequence_header = ['id', 'num', 'seq', 'keyseq']
@@ -376,7 +376,15 @@ def runBlock(blockType, datafile, subinfo):
             stim = stim_sequence.pop()
         # If learning block, arm magstim and keep it armed
         if test_block == False and not magstim.ready:
-            magstim.arm()
+            try:
+                magstim.arm()
+            except RuntimeError:
+                # If Magstim already armed, re-arming will result in an error.
+                # Since we can't check directly if the Magstim is armed (only
+                # whether it's ready to fire, which is False ~3-4 seconds after
+                # firing despite the Magstim being armed), we just have to
+                # try/catch here.
+                pass
         # If TMS sequence, choose a random trial to fire on
         stim_trial = -1
         if stim:
@@ -400,6 +408,7 @@ def runBlock(blockType, datafile, subinfo):
                 responseTimeoutTime = startTime+learningWaitTime
             # Enter wait loop w/ timeout for response
             responses = []
+            tms_fired = False
             allow_fire = trialNum == stim_trial
             while getTime() < responseTimeoutTime:
                 # Check for keypresses during response period
@@ -413,6 +422,11 @@ def runBlock(blockType, datafile, subinfo):
                 if allow_fire and getTime() > tms_fire_onset:
                     if magstim.ready:
                         trigger.send('fire_tms')
+                        tms_fired = True
+                    if not tms_fired:
+                        e1 = " * Warning: TMS failed to arm in time to fire "
+                        e2 = "(block {0}, sequence {1}, trial {2})"
+                        print(e1 + e2.format(blockNum + 1, subBlockNum, trialNum))
                     allow_fire = False
             trialDoneTime = getTime()
             # Parse trial responses and prepare feedback
@@ -469,7 +483,8 @@ def runBlock(blockType, datafile, subinfo):
                 'stim': trialStim,
                 'response': response,
                 'rt': rt,
-                'tms_fire': trialNum == stim_trial,
+                'tms_trial': trialNum == stim_trial,
+                'tms_fired': 'TRUE' if tms_fired else 'FALSE',
                 'error': error,
                 'multi_resp': multiResponse,
                 'feedback_resp': feedbackResponse,

@@ -423,15 +423,23 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 		self.log("t{0}_intertrial_interval_start".format(P.trial_number), True)
 		self.intertrial_start = time.time()
 
+		# Arm magstim right before trial if not already armed
+		if self.response_type == "imagery" and not self.magstim.ready:
+			try:
+				self.magstim.arm()
+			except RuntimeError:
+				# If Magstim already armed, re-arming will result in an error.
+				# Since we can't check directly if the Magstim is armed (only
+				# whether it's ready to fire, which is False ~3-4 seconds after
+				# firing despite the Magstim being armed), we just have to
+				# try/catch here.
+				pass
+
 		# Let participant self-initiate next trial
 		self.start_trial_button()
 
 
 	def trial(self):
-
-		# Arm magstim at start of trial if not already armed
-		if self.response_type == "imagery" and not self.magstim.ready:
-			self.magstim.arm()
 
 		self.trigger.send('trial_start')
 		start_delay = CountDown(P.origin_wait_time)
