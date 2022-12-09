@@ -765,5 +765,10 @@ explicit_recall(datafiles['recall'], {'id': pid})
 
 # Show completed message and exit the task
 showMessage(instructions['done'], lockWait=True)
-magstim.set_power(rmt) # reset TMS power level to RMT
+# NOTE: Resettng TMS to RMT fails unexpectedly sometimes, so handle exceptions
+try:
+    magstim.set_power(rmt)
+except:
+    e = " * Warning: Resetting TMS power to RMT ({0}%) failed."
+    print(e.format(rmt))
 exitSafely()

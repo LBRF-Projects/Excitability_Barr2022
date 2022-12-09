@@ -541,7 +541,12 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 		self.db.insert(session_data, "sessions")
 
 		# Reset TMS power to resting motor threshold
-		self.magstim.set_power(self.rmt)
+		# NOTE: This seems to fail unexpectedly sometimes, so handle exceptions
+		try:
+			self.magstim.set_power(self.rmt)
+		except:
+			e = " * Warning: Resetting TMS power to RMT ({0}%) failed."
+			print(e.format(self.rmt))
 
 		# show 'experiment complete' message before exiting experiment
 		msg = message(P.experiment_complete_message, "instructions", blit_txt=False)
