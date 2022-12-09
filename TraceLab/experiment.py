@@ -427,13 +427,15 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 		if self.response_type == "imagery" and not self.magstim.ready:
 			try:
 				self.magstim.arm()
-			except RuntimeError:
+			except RuntimeError as e:
 				# If Magstim already armed, re-arming will result in an error.
 				# Since we can't check directly if the Magstim is armed (only
 				# whether it's ready to fire, which is False ~3-4 seconds after
 				# firing despite the Magstim being armed), we just have to
 				# try/catch here.
-				pass
+				err = " * Warning: TMS failed to arm on block {0}, trial {1} ({2})"
+				errtype = str(e).split(":")[1].strip()
+				print(err.format(P.block_number, P.trial_number, errtype))
 
 		# Let participant self-initiate next trial
 		self.start_trial_button()

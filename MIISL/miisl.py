@@ -402,13 +402,15 @@ def runBlock(blockType, datafile, subinfo):
         if test_block == False and not magstim.ready:
             try:
                 magstim.arm()
-            except RuntimeError:
+            except RuntimeError as e:
                 # If Magstim already armed, re-arming will result in an error.
                 # Since we can't check directly if the Magstim is armed (only
                 # whether it's ready to fire, which is False ~3-4 seconds after
                 # firing despite the Magstim being armed), we just have to
                 # try/catch here.
-                pass
+                err = " * Warning: TMS failed to arm on block {0}, sequence {1} ({2})"
+                errtype = str(e).split(":")[1].strip()
+                print(err.format(blockNum + 1, subBlockNum, errtype))
         # If TMS sequence, choose a random trial to fire on
         stim_trial = -1
         if stim:
