@@ -382,6 +382,7 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 		self.drawing = 'NA'
 		self.control_response = -1
 		self.figure = None
+		self.response_started = False # For EMG markup on physical trials
 
 		# Initialize TMS variables
 		self.tms_trial = self.stim_trial if self.response_type == "imagery" else False
@@ -598,7 +599,10 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 			except TypeError:
 				pass
 		flip()
-
+		# If first frame of physical response, send EMG marker
+		if self.rc.draw_listener.started and not self.response_started:
+			self.trigger.send('response_start')
+			self.response_started = True
 
 	def imagery_trial(self):
 
@@ -619,7 +623,7 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 				at_origin = True
 				resp_start = self.evm.trial_time
 				self.rt = resp_start - start
-				self.trigger.send('imagery_start')
+				self.trigger.send('response_start')
 			ui_request()
 		fill()
 		blit(self.origin_active, 5, self.origin_pos, flip_x=P.flip_x)
@@ -647,6 +651,11 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 
 
 	def physical_trial(self):
+
+		fill()
+		blit(self.origin_inactive, 5, self.origin_pos, flip_x=P.flip_x)
+		flip()
+		self.trigger.send('circle_on')
 
 		self.rc.collect()
 		self.rt = self.rc.draw_listener.start_time

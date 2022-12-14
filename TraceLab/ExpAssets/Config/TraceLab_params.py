@@ -27,7 +27,7 @@ trigger_codes = {
     'trial_start': 2,
     'animation_start': 4,
     'circle_on': 6,
-    'imagery_start': 8,
+    'response_start': 8,
     'tms_fire': 17, # EMG pin 1 + TMS trigger on pin 5
     'trial_end': 10,
 }
