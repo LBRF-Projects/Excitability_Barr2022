@@ -2,8 +2,8 @@ viewingDistance = 100
 stimDisplayWidth = 100
 
 responseKeySet = {
-    'r': {'one': 'v', 'two': 'c', 'three': 'x', 'four': 'z'},
-    'l': {'one': 'm', 'two': ',', 'three': '.', 'four': '/'},
+    'l': {'one': 'v', 'two': 'c', 'three': 'x', 'four': 'z'},
+    'r': {'one': 'm', 'two': ',', 'three': '.', 'four': '/'},
 }
 digitMap = {'one': '1', 'two': '2', 'three': '3', 'four': '4'}
 digitMapReverse = {'1': 'one', '2': 'two', '3': 'three', '4': 'four'}

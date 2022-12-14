@@ -2,7 +2,7 @@
 
 This repository contains the experiment code for a study looking at whether cortical excitability during motor imagery depends on the motoric complexity of the imagined movement.
 
-This study uses two different tasks: 1) a modified version of the TraceLab task from [Ingram et al. (2018)](https://doi.org/10.1016/j.bbr.2018.10.030), and 2) a modified version of the Motor Imagery Implicit Sequence Learning (MIISL) task from [Kraeutner et al. ](https://dx.doi.org/10.1037/xhp0000148), both of which have been modified to deliver TMS pulses at 120% of participants' resting motor threshold on a random subset of trials. EMG data is recorded during each task to collect the motor-evoked potentials (MEPs) resulting from each pulse, giving a measure of cortical excitability for each task.
+This study uses two different tasks: 1) a modified version of the TraceLab task from [Ingram et al. (2018)](https://doi.org/10.1016/j.bbr.2018.10.030), and 2) a modified version of the Motor Imagery Implicit Sequence Learning (MIISL) task from [Kraeutner et al. ](https://dx.doi.org/10.1037/xhp0000148), both of which have been modified to deliver TMS pulses at 120% of participants' resting motor threshold on a random subset of trials. EMG data is recorded during each task to collect the motor-evoked potentials (MEPs) resulting from each pulse, giving a measure of cortical excitability for each task. The MIISL has also been modified to use the dominant hand for each participant (previous versions used the non-dominant hand) to keep the EMG arm consistent across both tasks.
 
 More information on the TraceLab task and how it works can be found in the [main TraceLab repository](https://github.com/LBRF/TraceLab).
 
