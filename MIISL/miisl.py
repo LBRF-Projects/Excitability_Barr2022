@@ -670,6 +670,7 @@ def get_rmt_power(tms):
                     rmt_temp -= 1
                 elif k.sym == sdl2.SDLK_RETURN:
                     tms.set_power(rmt_temp)
+                    time.sleep(0.1)  # Give the TMS a break between commands
                     rmt = tms.get_power()
                     done = True
                     break

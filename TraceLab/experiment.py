@@ -292,6 +292,7 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 				rmt_temp -= 1
 			elif key_pressed('return', queue=q):
 				self.magstim.set_power(rmt_temp)
+				time.sleep(0.1)  # Give the TMS a break between commands
 				rmt = self.magstim.get_power()
 				rmt_confirmed = True
 
