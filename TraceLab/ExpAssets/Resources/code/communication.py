@@ -371,6 +371,7 @@ class MagPyController(TMSController):
         err, msg = self._device.highResolutionMode(False, receipt=True)
         if err != 3:
             self._device.setPowerB(0)
+            time.sleep(0.1) # Delay between TMS commands to avoid random errors
             self._device.setPulseInterval(0)
 
     def _set_power(self, level):
