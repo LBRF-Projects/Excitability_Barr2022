@@ -1,0 +1,30 @@
+{
+    "default_strings": {
+      "answer_not_supplied": "Please provide an answer.",
+      "invalid_answer": "Your answer must be one of the following: {0}",
+      "out_of_range": "Your answer must be a number between {0} and {1}, inclusive.",
+      "block_break": "Whew! You've completed block {0} of {1}. When you're ready to continue, press any key."
+    },
+    "demographic": [
+        {
+            "title": "name",
+            "database_field": "study_id",
+            "query": "Please enter the unique ID for the participant:",
+            "accepted": null,
+            "allow_null": false,
+            "format": {
+                "type": "str",
+                "styles": "default",
+                "positions": "default",
+                "password": false,
+                "range": null,
+                "case_sensitive": false,
+                "accept_as_true": null,
+                "action": null
+            },
+            "anonymous_value": "EVAL: now()",
+            "active": true
+        }
+    ],
+    "experimental": null
+}
