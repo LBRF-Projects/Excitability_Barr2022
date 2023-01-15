@@ -101,7 +101,7 @@ def get_mep_baseline(magstim, trigger, pulses=10, max_jitter=1.5):
     start_txt = (
         "Welcome to the MEP baseline collector!\n\n"
         "When collection starts, you will be stimulated a number of times by the "
-        "TMS to measure your baseline muscle response. Please keep your arms relaxed "
+        "TMS to measure your baseline muscle response.\nPlease keep your arms relaxed "
         "until collection is complete.\n\n"
         "When you are relaxed and ready, please ask the experimenter to start the "
         "collection process."
