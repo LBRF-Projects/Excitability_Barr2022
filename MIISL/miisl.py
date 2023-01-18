@@ -453,6 +453,7 @@ def runBlock(blockType, datafile, subinfo):
                         e1 = " * Warning: TMS failed to arm in time to fire "
                         e2 = "(block {0}, sequence {1}, trial {2})"
                         print(e1 + e2.format(blockNum + 1, subBlockNum, trialNum))
+                        magstim.disarm()
                     allow_fire = False
             trialDoneTime = getTime()
             # Parse trial responses and prepare feedback
@@ -498,6 +499,9 @@ def runBlock(blockType, datafile, subinfo):
                     response, rt = resp
                 elif resp:
                     feedbackResponse = 'TRUE'
+            # If TMS trial and failed to fire, re-arm
+            if trialNum == stim_trial and not tms_fired:
+                magstim.arm()
             # Gather and write out data
             dat = subinfo.copy()
             dat.update({
