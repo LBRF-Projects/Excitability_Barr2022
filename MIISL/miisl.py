@@ -98,7 +98,7 @@ font = sdl2.ext.FontTTF(fontpath, fontsize, white)
 font.add_style("grey", fontsize, color=lightGrey)
 
 # Load all audio clips for the experiment
-intro_audio = Sound(os.path.join(sound_dir, "MIFamMono.mp3"))
+intro_audio = Sound(os.path.join(sound_dir, "ISL_MIinstructions.mp3"))
 stop_sound = Sound(os.path.join(sound_dir, "stop.mp3"))
 done_sound = Sound(os.path.join(sound_dir, "done.mp3"))
 stim_sounds = {}
