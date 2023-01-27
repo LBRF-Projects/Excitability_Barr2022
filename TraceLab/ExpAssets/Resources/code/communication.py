@@ -323,6 +323,12 @@ class TMSController(object):
         pass
 
     @property
+    def armed(self):
+        """bool: True if the stimulator has been armed, otherwise False.
+        """
+        pass
+
+    @property
     def ready(self):
         """bool: True if the stimulator is ready to fire, otherwise False.
         """
@@ -359,6 +365,10 @@ class VirtualTMSController(TMSController):
 
     def fire(self):
         pass
+
+    @property
+    def armed(self):
+        return self._info['armed']
 
     @property
     def ready(self):
@@ -404,6 +414,15 @@ class MagPyController(TMSController):
         self._device.fire()
 
     @property
+    def armed(self):
+        err, params = self._device._queryCommand()
+        status = params['instr']
+        if err:
+            return False
+        else:
+            return bool(status['ready']) or bool(status['armed'])
+
+    @property
     def ready(self):
         return self._device.isReadyToFire()
 
@@ -432,6 +451,10 @@ class MagnetoController(TMSController):
 
     def fire(self):
         self._device.fire()
+
+    @property
+    def armed(self):
+        return self._device.armed
 
     @property
     def ready(self):
