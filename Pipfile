@@ -10,6 +10,7 @@ pylint = "*"
 klibs = {file = "https://github.com/a-hurst/klibs/releases/download/0.7.6b1/klibs.tar.gz"}
 pyyaml = "*"
 MagPy-TMS = "==1.4"
+magneto = {git = "https://github.com/a-hurst/magneto.git", ref = "9892fb3e8979821015120b8b8e43c57fe8775591"}
 LabJackPython = "*"
 
 [requires]

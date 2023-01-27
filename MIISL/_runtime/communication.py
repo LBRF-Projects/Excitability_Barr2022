@@ -1,8 +1,6 @@
 import time
 from importlib.util import find_spec
 
-from klibs import P
-
 
 tms_serial_port = '/dev/ttyUSB0'
 labjack_port = 'FIO'
@@ -92,15 +90,23 @@ def get_tms_controller():
     controller will be returned.
 
     """
-    if _package_available('magpy'):
-        # NOTE: Currently no way of autodetecting Magstim model
+    if _package_available('serial'):
         from serial.tools.list_ports import comports
         available_ports = [p.device for p in comports()]
         if tms_serial_port in available_ports:
-            from magpy.magstim import BiStim
+
             _poke_magstim(tms_serial_port)
-            dev = BiStim(tms_serial_port)
-            return MagPyController(dev)
+
+            if _package_available('magneto'):
+                from magneto import Magstim
+                dev = Magstim(tms_serial_port)
+                return MagnetoController(dev)
+
+            elif _package_available('magpy'):
+                # NOTE: Currently no way of autodetecting Magstim model
+                from magpy.magstim import BiStim
+                dev = BiStim(tms_serial_port)
+                return MagPyController(dev)
     
     # If no hardware stimulator available, return a virtual one
     return VirtualTMSController(None)
@@ -408,3 +414,33 @@ class MagPyController(TMSController):
     @property
     def ready(self):
         return self._device.isReadyToFire()
+
+
+class MagnetoController(TMSController):
+    """A TMSController implementation for Magstim TMS systems using Magneto.
+
+    Currently only Magstim 200 and BiStim stimulators are supported.
+
+    """
+    def _hardware_init(self):
+        self._device.connect()
+
+    def _set_power(self, level):
+        self._device.set_power(level)
+
+    def _arm(self):
+        self._device.arm()
+
+    def get_power(self):
+        pwr_a, pwr_b, interval = self._device.get_settings()
+        return pwr_a
+
+    def disarm(self):
+        self._device.disarm()
+
+    def fire(self):
+        self._device.fire()
+
+    @property
+    def ready(self):
+        return self._device.ready
