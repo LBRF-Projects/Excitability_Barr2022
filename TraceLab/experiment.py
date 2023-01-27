@@ -181,6 +181,7 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 
 		# Initialize TMS communication (if required)
 		self.magstim = None
+		self.magstim_timeout = 0 # seconds since last fired or armed
 		if P.requires_tms:
 			from communication import get_tms_controller
 			self.magstim = get_tms_controller()
@@ -305,9 +306,13 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 		self.response_type = self.block_factors[P.block_number - 1]['response_type']
 		self.feedback_type = self.block_factors[P.block_number - 1]['feedback_type']
 
-		# If starting a physical practice block, disarm the magstim
-		if self.response_type == PHYS and self.magstim.armed:
+		# Disarm and re-arm the magstim on every imagery block
+		if self.magstim.armed:
 			self.magstim.disarm()
+			self.magstim_timeout = 0
+		if self.response_type == "imagery":
+			self.magstim.arm()
+			self.magstim_timeout = time.time()
 
 		# If on first block of session, or response type is different from response type of
 		# previous block, do tutorial animation and practice
@@ -425,10 +430,21 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 		self.log("t{0}_intertrial_interval_start".format(P.trial_number), True)
 		self.intertrial_start = time.time()
 
+		# If there's < 10s left before the magstim self-disarms, disarm/re-arm manually
+		# to ensure we don't disarm mid-trial
+		if self.magstim_armed:
+			if self.magstim_timeout and (time.time() - self.magstim_timeout) > 50:
+				self.magstim.disarm()
+				self.magstim_timeout = 0
+
+		# Let participant self-initiate next trial
+		self.start_trial_button()
+
 		# Arm magstim right before trial if not already armed
 		if self.response_type == "imagery" and not self.magstim.armed:
 			try:
 				self.magstim.arm()
+				self.magstim_timeout = time.time()
 			except RuntimeError as e:
 				# If Magstim already armed, re-arming will result in an error.
 				# Since we can't check directly if the Magstim is armed (only
@@ -440,9 +456,6 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 				if ":" in errtype:
 					errtype = errtype.split(":")[1].strip()
 				print(err.format(P.block_number, P.trial_number, errtype))
-
-		# Let participant self-initiate next trial
-		self.start_trial_button()
 
 
 	def trial(self):
@@ -642,6 +655,7 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 					# Update onset with actual fire time and send trigger to fire
 					self.tms_onset = (self.evm.trial_time - resp_start) * 1000
 					self.trigger.send('tms_fire')
+					self.magstim_timeout = time.time()
 					self.tms_fired = True
 				allow_fire = False
 			# If finger lifted from circle, end response
