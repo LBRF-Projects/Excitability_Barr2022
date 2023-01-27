@@ -399,7 +399,7 @@ def runBlock(blockType, datafile, subinfo):
         if not test_block:
             stim = stim_sequence.pop()
         # If learning block, arm magstim and keep it armed
-        if test_block == False and not magstim.ready:
+        if test_block == False and not magstim.armed:
             try:
                 magstim.arm()
             except RuntimeError as e:
@@ -409,7 +409,9 @@ def runBlock(blockType, datafile, subinfo):
                 # firing despite the Magstim being armed), we just have to
                 # try/catch here.
                 err = " * Warning: TMS failed to arm on block {0}, sequence {1} ({2})"
-                errtype = str(e).split(":")[1].strip()
+                errtype = str(e)
+                if ":" in errtype:
+                    errtype = errtype.split(":")[1].strip()
                 print(err.format(blockNum + 1, subBlockNum, errtype))
         # If TMS sequence, choose a random trial to fire on
         stim_trial = -1

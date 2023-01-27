@@ -82,15 +82,23 @@ def get_tms_controller():
     controller will be returned.
 
     """
-    if package_available('magpy'):
-        # NOTE: Currently no way of autodetecting Magstim model
+    if package_available('serial'):
         from serial.tools.list_ports import comports
         available_ports = [p.device for p in comports()]
         if P.tms_serial_port in available_ports:
-            from magpy.magstim import BiStim
+
             _poke_magstim(P.tms_serial_port)
-            dev = BiStim(P.tms_serial_port)
-            return MagPyController(dev)
+
+            if package_available('magneto'):
+                from magneto import Magstim
+                dev = Magstim(P.tms_serial_port)
+                return MagnetoController(dev)
+
+            elif package_available('magpy'):
+                # NOTE: Currently no way of autodetecting Magstim model
+                from magpy.magstim import BiStim
+                dev = BiStim(P.tms_serial_port)
+                return MagPyController(dev)
     
     # If no hardware stimulator available, return a virtual one
     return VirtualTMSController(None)
@@ -315,6 +323,12 @@ class TMSController(object):
         pass
 
     @property
+    def armed(self):
+        """bool: True if the stimulator has been armed, otherwise False.
+        """
+        pass
+
+    @property
     def ready(self):
         """bool: True if the stimulator is ready to fire, otherwise False.
         """
@@ -353,6 +367,10 @@ class VirtualTMSController(TMSController):
         pass
 
     @property
+    def armed(self):
+        return self._info['armed']
+
+    @property
     def ready(self):
         return self._info['armed']
 
@@ -371,7 +389,6 @@ class MagPyController(TMSController):
         err, msg = self._device.highResolutionMode(False, receipt=True)
         if err != 3:
             self._device.setPowerB(0)
-            time.sleep(0.1) # Delay between TMS commands to avoid random errors
             self._device.setPulseInterval(0)
 
     def _set_power(self, level):
@@ -397,5 +414,48 @@ class MagPyController(TMSController):
         self._device.fire()
 
     @property
+    def armed(self):
+        err, params = self._device._queryCommand()
+        status = params['instr']
+        if err:
+            return False
+        else:
+            return bool(status['ready']) or bool(status['armed'])
+
+    @property
     def ready(self):
         return self._device.isReadyToFire()
+
+
+class MagnetoController(TMSController):
+    """A TMSController implementation for Magstim TMS systems using Magneto.
+
+    Currently only Magstim 200 and BiStim stimulators are supported.
+
+    """
+    def _hardware_init(self):
+        self._device.connect()
+
+    def _set_power(self, level):
+        self._device.set_power(level)
+
+    def _arm(self):
+        self._device.arm()
+
+    def get_power(self):
+        pwr_a, pwr_b, interval = self._device.get_settings()
+        return pwr_a
+
+    def disarm(self):
+        self._device.disarm()
+
+    def fire(self):
+        self._device.fire()
+
+    @property
+    def armed(self):
+        return self._device.armed
+
+    @property
+    def ready(self):
+        return self._device.ready
