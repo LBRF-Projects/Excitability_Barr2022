@@ -306,7 +306,7 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 		self.feedback_type = self.block_factors[P.block_number - 1]['feedback_type']
 
 		# If starting a physical practice block, disarm the magstim
-		if self.response_type == PHYS and self.magstim.ready:
+		if self.response_type == PHYS and self.magstim.armed:
 			self.magstim.disarm()
 
 		# If on first block of session, or response type is different from response type of
@@ -426,7 +426,7 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 		self.intertrial_start = time.time()
 
 		# Arm magstim right before trial if not already armed
-		if self.response_type == "imagery" and not self.magstim.ready:
+		if self.response_type == "imagery" and not self.magstim.armed:
 			try:
 				self.magstim.arm()
 			except RuntimeError as e:
@@ -436,7 +436,9 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 				# firing despite the Magstim being armed), we just have to
 				# try/catch here.
 				err = " * Warning: TMS failed to arm on block {0}, trial {1} ({2})"
-				errtype = str(e).split(":")[1].strip()
+				errtype = str(e)
+				if ":" in errtype:
+					errtype = errtype.split(":")[1].strip()
 				print(err.format(P.block_number, P.trial_number, errtype))
 
 		# Let participant self-initiate next trial
