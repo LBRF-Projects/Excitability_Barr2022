@@ -432,7 +432,7 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 
 		# If there's < 10s left before the magstim self-disarms, disarm/re-arm manually
 		# to ensure we don't disarm mid-trial
-		if self.magstim_armed:
+		if self.magstim.armed:
 			if self.magstim_timeout and (time.time() - self.magstim_timeout) > 50:
 				self.magstim.disarm()
 				self.magstim_timeout = 0
