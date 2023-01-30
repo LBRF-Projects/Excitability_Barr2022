@@ -445,13 +445,11 @@ class TraceLab(klibs.Experiment, BoundaryInspector):
 			try:
 				self.magstim.arm()
 				self.magstim_timeout = time.time()
-			except RuntimeError as e:
+			except (ValueError, RuntimeError) as e:
 				# If Magstim already armed, re-arming will result in an error.
-				# Since we can't check directly if the Magstim is armed (only
-				# whether it's ready to fire, which is False ~3-4 seconds after
-				# firing despite the Magstim being armed), we just have to
-				# try/catch here.
-				err = " * Warning: TMS failed to arm on block {0}, trial {1} ({2})"
+				# Since the Magstim seems to lie sometimes and say it's disarmed when
+				# it's not, we just have to try/catch here.
+				err = " * Warning: TMS reported failing to arm on block {0}, trial {1} ({2})"
 				errtype = str(e)
 				if ":" in errtype:
 					errtype = errtype.split(":")[1].strip()
