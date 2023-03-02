@@ -273,6 +273,24 @@ def showMessage(myText,lockWait=False):
     return [response,messageViewingTime]
 
 
+def pause_task(magstim):
+    if magstim.armed:
+        magstim.disarm()
+    showMessage(
+        "Task paused, take a break!\nWhen ready, press any key to resume the task."
+    )
+    magstim.arm()
+    clearScreen(black)
+    drawText("Re-arming TMS, please wait...", font, 'grey')
+    simpleWait(0.500)
+    stimDisplay.refresh()
+    while not magstim.armed:
+        time.sleep(0.1)
+        events = pump()
+        check_for_quit(events)
+    showMessage("Press any key to begin the next trial.")
+
+
 def getInput(getWhat):
     """Displays a prompt and collects text input, returning the result on enter.
     """
@@ -487,6 +505,9 @@ def runBlock(blockType, datafile, subinfo):
             else:
                 if len(responses) > 0:
                     response = responses[0][0]
+                    if response == "p":
+                        pause_task(magstim)
+                        break # End current sequence and skip to next one
                     rt = responses[0][1]-startTime
                     feedbackText = "Don't respond!"
                     err_sound = True
