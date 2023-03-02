@@ -282,8 +282,8 @@ def pause_task(magstim):
     magstim.arm()
     clearScreen(black)
     drawText("Re-arming TMS, please wait...", font, 'grey')
-    simpleWait(0.500)
     stimDisplay.refresh()
+    simpleWait(0.500)
     while not magstim.armed:
         time.sleep(0.1)
         events = pump()
