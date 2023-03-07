@@ -209,8 +209,20 @@ class U3Port(TriggerPort):
         )
 
     def _write_trigger(self, value):
-        # Fast method from Appelhoff & Stenner (2021), may be erratic on Windows
-        self._device.writeRegister(self._write_reg, 0xFF00 + (value & 0xFF))
+        retry_count = 0
+        while True:
+            try:
+                # Fast method from Appelhoff & Stenner (2021), may be erratic on Windows
+                self._device.writeRegister(self._write_reg, 0xFF00 + (value & 0xFF))
+                break
+            except Exception as e:
+                print("LabJack write error: {0}".format(str(e)))
+                retry_count += 1
+            # If we've retried the command 3 times and still get an exception, try to
+            # shut down cleanly and then throw an error
+            if retry_count >= 3:
+                self.close()
+                raise RuntimeError("Setting LabJack trigger state failed repeatedly.")
 
     def close(self):
         # Needs to be called on Linux and macOS in order for the LabJack to be
